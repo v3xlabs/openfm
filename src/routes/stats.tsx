@@ -19,6 +19,7 @@ import { useData } from '../hooks/useData'
 import VisitedCountriesMap from '../components/VisitedCountriesMap'
 import VisitedProvincesMap from '../components/VisitedProvincesMap'
 import DateFilter from '../components/DateFilter'
+import StatsCharts from '../components/StatsCharts'
 import type { DateFilterType } from '../components/DateFilter'
 import classnames from 'classnames'
 
@@ -159,6 +160,17 @@ const StatsComponent: FC = () => {
             selectedFilter={dateFilter}
             onFilterChange={setDateFilter}
           />
+        </div>
+      )}
+
+      {/* Charts Section */}
+      {filteredStatistics && filteredStatistics.length > 0 && (
+        <div>
+          <div className="text-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Performance & Usage Trends</h2>
+            <p className="text-gray-600">Visual analysis of your driving patterns and app usage over time</p>
+          </div>
+          <StatsCharts quarterlyStatistics={filteredStatistics} />
         </div>
       )}
 
