@@ -1,4 +1,5 @@
 export { default as AppWrapper } from './AppWrapper';
+export { default as CameraThumbnail } from './CameraThumbnail';
 export { default as DateFilter } from './DateFilter';
 export { default as FileUpload } from './FileUpload';
 export { RDWVehicleDetails } from './RDWVehicleDetails';

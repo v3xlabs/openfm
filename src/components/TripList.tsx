@@ -109,8 +109,9 @@ const TripList: FC<TripListProps> = ({ trips, selectedTrip, onTripSelect, classN
                 className={classnames(
                   'w-full text-left p-2 transition-all duration-200 hover:shadow-md',
                   {
-                    'border-blue-500': isSelected,
+                    'border-blue-500 bg-white': isSelected,
                     'border-transparent hover:border-gray-300 hover:bg-gray-50': !isSelected,
+                    'bg-neutral-100': !isSelected && selectedTrip,
                   }
                 )}
               >

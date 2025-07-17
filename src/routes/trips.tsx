@@ -1,10 +1,13 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { FC } from 'react'
 import { 
   IoMapOutline,
   IoSpeedometerOutline,
-  IoSettingsOutline
+  IoSettingsOutline,
+  IoLocationOutline,
+  IoCarSportOutline,
+  IoEyeOutline
 } from 'react-icons/io5'
 import TripMap from '../components/TripMap'
 import TripList from '../components/TripList'
@@ -12,8 +15,32 @@ import { SpeedCalibration } from '../components'
 import type { Trip } from '../types'
 import { useData } from '../hooks/useData'
 
+interface FocusCamera {
+  lat: number;
+  lng: number;
+  type: string;
+  name: string;
+}
+
+interface FocusTripCamera {
+  tripStartTime: string;
+  tripEndTime: string;
+  lat: number;
+  lng: number;
+  type: string;
+  name: string;
+}
+
+interface TripsSearch {
+  view?: 'all' | 'trip' | 'camera' | 'trip-camera';
+  tripId?: string; // Format: startTime-endTime
+  focusCamera?: FocusCamera;
+  focusTripCamera?: FocusTripCamera;
+}
+
 const TripsComponent: FC = () => {
   const { data } = useData()
+  const { view = 'all', tripId, focusCamera, focusTripCamera } = Route.useSearch()
   const [selectedTrip, setSelectedTrip] = useState<Trip | null>(null)
   const [speedCalibrationFactor, setSpeedCalibrationFactor] = useState(1.0)
   const [showCalibration, setShowCalibration] = useState(false)
@@ -27,13 +54,73 @@ const TripsComponent: FC = () => {
     setSpeedCalibrationFactor(factor);
   };
 
+  // Handle URL-based trip selection
+  useEffect(() => {
+    if (!data?.trips) return;
+
+    if (view === 'trip' && tripId) {
+      // Parse tripId format: startTime-endTime
+      const [startTime, endTime] = tripId.split('-');
+      const trip = data.trips.find(t => 
+        t.startTime === startTime && t.endTime === endTime
+      );
+      if (trip) {
+        setSelectedTrip(trip);
+      }
+    } else if (view === 'trip-camera' && focusTripCamera) {
+      // Select specific trip for trip-camera view
+      const trip = data.trips.find(t => 
+        t.startTime === focusTripCamera.tripStartTime && 
+        t.endTime === focusTripCamera.tripEndTime
+      );
+      if (trip) {
+        setSelectedTrip(trip);
+      }
+    } else {
+      // Clear selection for all trips or camera views
+      setSelectedTrip(null);
+    }
+  }, [view, tripId, focusTripCamera, data]);
+
   if (!data) {
     return <div>Loading...</div> // This should not happen with AppWrapper but just in case
   }
 
   const trips = data.trips || []
 
-  console.log('Current selectedTrip:', selectedTrip ? `${selectedTrip.startTime} - ${selectedTrip.endTime}` : 'None');
+  // Determine what to display in header
+  const getHeaderInfo = () => {
+    switch (view) {
+      case 'trip':
+        return {
+          title: 'Selected Trip',
+          subtitle: '• Viewing single trip',
+          icon: IoCarSportOutline
+        };
+      case 'camera':
+        return {
+          title: `Camera: ${focusCamera?.name || 'Unknown'}`,
+          subtitle: `• ${focusCamera?.type || 'Unknown'} camera`,
+          icon: IoLocationOutline
+        };
+      case 'trip-camera':
+        return {
+          title: `Camera: ${focusTripCamera?.name || 'Unknown'}`,
+          subtitle: `• In specific trip • ${focusTripCamera?.type || 'Unknown'}`,
+          icon: IoLocationOutline
+        };
+      default:
+        return {
+          title: 'All Trips',
+          subtitle: '• Overview mode',
+          icon: IoEyeOutline
+        };
+    }
+  };
+
+  const headerInfo = getHeaderInfo();
+
+  console.log('Current view:', view, 'selectedTrip:', selectedTrip ? `${selectedTrip.startTime} - ${selectedTrip.endTime}` : 'None');
 
   return (
     <div className="h-[calc(100vh-94px)] overflow-hidden">
@@ -73,17 +160,27 @@ const TripsComponent: FC = () => {
                     <div className="flex items-center gap-3">
                       <IoMapOutline className="h-6 w-6 text-blue-600" />
                       <h3 className="text-xl font-semibold text-gray-900">
-                        {selectedTrip ? 'Selected Trip' : 'Trip Map'}
-                        {selectedTrip && (
-                          <span className="ml-3 text-base font-normal text-gray-600">
-                            • Viewing single trip
-                          </span>
-                        )}
+                        {headerInfo.title}
+                        <span className="ml-3 text-base font-normal text-gray-600">
+                          {headerInfo.subtitle}
+                        </span>
                       </h3>
                     </div>
                     
                     {/* Speed Calibration Controls */}
                     <div className="flex items-center gap-3">
+                      {(view === 'camera' || view === 'trip-camera') && (
+                        <div className="flex items-center gap-2 px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm">
+                          <IoLocationOutline className="h-4 w-4" />
+                          <span>Camera Focus</span>
+                        </div>
+                      )}
+                      {view === 'trip' && (
+                        <div className="flex items-center gap-2 px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm">
+                          <IoCarSportOutline className="h-4 w-4" />
+                          <span>Trip Focus</span>
+                        </div>
+                      )}
                       {speedCalibrationFactor !== 1.0 && (
                         <div className="flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">
                           <IoSpeedometerOutline className="h-4 w-4" />
@@ -106,6 +203,10 @@ const TripsComponent: FC = () => {
               <TripMap 
                 trips={selectedTrip ? [selectedTrip] : trips}
                 selectedTrip={selectedTrip}
+                speedCalibrationFactor={speedCalibrationFactor}
+                viewMode={view}
+                focusCamera={focusCamera}
+                focusTripCamera={focusTripCamera}
                 className="h-full"
               />
             </div>
@@ -137,4 +238,10 @@ const TripsComponent: FC = () => {
 
 export const Route = createFileRoute('/trips')({
   component: TripsComponent,
+  validateSearch: (search: Record<string, unknown>): TripsSearch => ({
+    view: (search.view as 'all' | 'trip' | 'camera' | 'trip-camera') || 'all',
+    tripId: search.tripId as string | undefined,
+    focusCamera: search.focusCamera as FocusCamera | undefined,
+    focusTripCamera: search.focusTripCamera as FocusTripCamera | undefined,
+  })
 }) 

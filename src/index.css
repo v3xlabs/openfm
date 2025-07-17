@@ -12,7 +12,7 @@
   }
 }
 
-/* Ensure map container has proper height */
+/* Leaflet map fixes */
 .leaflet-container {
   height: 100%;
   width: 100%;
@@ -111,4 +111,50 @@
 .province-emoji {
   font-size: 14px;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+}
+
+/* Custom marker styles */
+.custom-speed-camera-icon {
+  background: transparent !important;
+  border: none !important;
+}
+
+.custom-camera-thumbnail-icon {
+  background: transparent !important;
+  border: none !important;
+}
+
+.focused-camera-icon {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* Camera thumbnail specific styles */
+.camera-thumbnail-marker {
+  position: relative;
+  z-index: 1000;
+}
+
+/* Ensure thumbnail maps render properly */
+.leaflet-container .leaflet-control-container {
+  display: none;
+}
+
+/* Override Leaflet's default marker shadows for thumbnails */
+.leaflet-marker-shadow {
+  display: none;
+}
+
+/* Animation for focused camera marker */
+@keyframes pulseOrange {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.animate-pulse {
+  animation: pulseOrange 2s infinite;
 }

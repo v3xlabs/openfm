@@ -10,6 +10,7 @@ import {
   IoStatsChartOutline,
   IoSettingsOutline
 } from 'react-icons/io5'
+import { PiSecurityCamera } from 'react-icons/pi'
 import { MdDashboard } from 'react-icons/md'
 import classnames from 'classnames'
 import { useData } from '../hooks/useData'
@@ -19,6 +20,11 @@ const navigationItems = [
     to: "/trips",
     icon: IoMapOutline,
     label: "Trips"
+  },
+  {
+    to: "/cams",
+    icon: PiSecurityCamera,
+    label: "Cameras"
   },
   {
     to: "/stats", 

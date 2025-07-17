@@ -15,6 +15,7 @@ import { Route as SubscriptionsRouteImport } from './routes/subscriptions'
 import { Route as StatsRouteImport } from './routes/stats'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as DebugRouteImport } from './routes/debug'
+import { Route as CamsRouteImport } from './routes/cams'
 import { Route as IndexRouteImport } from './routes/index'
 
 const VehiclesRoute = VehiclesRouteImport.update({
@@ -47,6 +48,11 @@ const DebugRoute = DebugRouteImport.update({
   path: '/debug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CamsRoute = CamsRouteImport.update({
+  id: '/cams',
+  path: '/cams',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -55,6 +61,7 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/cams': typeof CamsRoute
   '/debug': typeof DebugRoute
   '/profile': typeof ProfileRoute
   '/stats': typeof StatsRoute
@@ -64,6 +71,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/cams': typeof CamsRoute
   '/debug': typeof DebugRoute
   '/profile': typeof ProfileRoute
   '/stats': typeof StatsRoute
@@ -74,6 +82,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/cams': typeof CamsRoute
   '/debug': typeof DebugRoute
   '/profile': typeof ProfileRoute
   '/stats': typeof StatsRoute
@@ -85,6 +94,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/cams'
     | '/debug'
     | '/profile'
     | '/stats'
@@ -94,6 +104,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/cams'
     | '/debug'
     | '/profile'
     | '/stats'
@@ -103,6 +114,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/cams'
     | '/debug'
     | '/profile'
     | '/stats'
@@ -113,6 +125,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CamsRoute: typeof CamsRoute
   DebugRoute: typeof DebugRoute
   ProfileRoute: typeof ProfileRoute
   StatsRoute: typeof StatsRoute
@@ -165,6 +178,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DebugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/cams': {
+      id: '/cams'
+      path: '/cams'
+      fullPath: '/cams'
+      preLoaderRoute: typeof CamsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -177,6 +197,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CamsRoute: CamsRoute,
   DebugRoute: DebugRoute,
   ProfileRoute: ProfileRoute,
   StatsRoute: StatsRoute,

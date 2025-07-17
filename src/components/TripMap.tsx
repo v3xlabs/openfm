@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import type { FC } from 'react';
 import { MapContainer, TileLayer, Polyline, Marker, Popup, useMap } from 'react-leaflet';
 import { LatLngBounds, divIcon } from 'leaflet';
@@ -15,19 +15,39 @@ import {
 } from 'react-icons/io5';
 import { PiSecurityCamera, PiPoliceCarFill, PiSpeedometerFill } from 'react-icons/pi';
 import { createRoot } from 'react-dom/client';
-import type { Trip } from '../types';
-import { decodePolyline, getCoordinatesFromTrip, calculateSegmentSpeeds, getSpeedColor } from '../utils/dataParser';
+import { useNavigate } from '@tanstack/react-router';
+import type { Trip, SpeedTrapEvent } from '../types';
+import { decodePolyline, getCoordinatesFromTrip, calculateSegmentSpeeds, getSpeedColor, calculateDistance } from '../utils/dataParser';
 import { 
   getSpeedTrapStyling, 
   roundSpeedToNearest12,
   VIOLATION_COLORS 
 } from '../utils/speedTrapHelpers';
 
+interface FocusCamera {
+  lat: number;
+  lng: number;
+  type: string;
+  name: string;
+}
+
+interface FocusTripCamera {
+  tripStartTime: string;
+  tripEndTime: string;
+  lat: number;
+  lng: number;
+  type: string;
+  name: string;
+}
+
 interface TripMapProps {
   trips: Trip[];
   selectedTrip?: Trip | null;
   className?: string;
   speedCalibrationFactor?: number;
+  viewMode?: 'all' | 'trip' | 'camera' | 'trip-camera';
+  focusCamera?: FocusCamera;
+  focusTripCamera?: FocusTripCamera;
 }
 
 interface MapLegendState {
@@ -237,7 +257,8 @@ const MapLegend: FC<{
   );
 };
 
-const TripMap: FC<TripMapProps> = ({ trips, selectedTrip, className, speedCalibrationFactor = 1.0 }) => {
+const TripMap: FC<TripMapProps> = ({ trips, selectedTrip, className, speedCalibrationFactor = 1.0, viewMode = 'all', focusCamera, focusTripCamera }) => {
+  const navigate = useNavigate();
   const [bounds, setBounds] = useState<LatLngBounds | null>(null);
   const [legendState, setLegendState] = useState<MapLegendState>({
     showTripPaths: true,
@@ -247,6 +268,90 @@ const TripMap: FC<TripMapProps> = ({ trips, selectedTrip, className, speedCalibr
     showSpeedTraps: true,
     showAverageSpeedChecks: true
   });
+
+  // Aggregate camera data for "all trips" view
+  const combinedCameras = useMemo(() => {
+    if (viewMode !== 'all' || selectedTrip) return [];
+
+    const cameraMap = new Map<string, {
+      latitude: number;
+      longitude: number;
+      speedTrapType: string;
+      roadName: string;
+      encounters: Array<{
+        event: SpeedTrapEvent;
+        trip: Trip;
+        date: string;
+      }>;
+      totalEncounters: number;
+      violations: number;
+      warnings: number;
+      compliant: number;
+    }>();
+
+    const proximityThreshold = 0.05; // 50 meters
+
+    for (const trip of trips) {
+      if (!trip.speedTrapEvents) continue;
+
+      for (const event of trip.speedTrapEvents) {
+        if (!event.latitude || !event.longitude || !event.speed) continue;
+
+        // Find existing camera within proximity threshold
+        let existingCamera = null;
+        for (const [, camera] of cameraMap.entries()) {
+          const distance = calculateDistance(
+            event.latitude, event.longitude,
+            camera.latitude, camera.longitude
+          );
+          
+          if (distance <= proximityThreshold && 
+              event.speedTrapType.toLowerCase() === camera.speedTrapType.toLowerCase()) {
+            existingCamera = camera;
+            break;
+          }
+        }
+
+        const encounter = {
+          event,
+          trip,
+          date: new Date(event.timestamp || trip.startTime).toISOString()
+        };
+
+        if (existingCamera) {
+          // Add to existing camera
+          existingCamera.encounters.push(encounter);
+          existingCamera.totalEncounters++;
+          
+          // Update violation counts
+          const styling = getSpeedTrapStyling(event);
+          if (styling.isViolation) existingCamera.violations++;
+          else if (styling.isWarning) existingCamera.warnings++;
+          else if (styling.isCompliant) existingCamera.compliant++;
+        } else {
+          // Create new camera entry
+          const cameraId = `${event.latitude.toFixed(6)}_${event.longitude.toFixed(6)}_${event.speedTrapType}`;
+          const styling = getSpeedTrapStyling(event);
+          
+          const newCamera = {
+            latitude: event.latitude,
+            longitude: event.longitude,
+            speedTrapType: event.speedTrapType,
+            roadName: event.roadName || 'Unknown Road',
+            encounters: [encounter],
+            totalEncounters: 1,
+            violations: styling.isViolation ? 1 : 0,
+            warnings: styling.isWarning ? 1 : 0,
+            compliant: styling.isCompliant ? 1 : 0,
+          };
+          
+          cameraMap.set(cameraId, newCamera);
+        }
+      }
+    }
+
+    return Array.from(cameraMap.values());
+  }, [trips, viewMode, selectedTrip]);
 
   const handleLegendToggle = (key: keyof MapLegendState) => {
     setLegendState(prev => {
@@ -271,6 +376,22 @@ const TripMap: FC<TripMapProps> = ({ trips, selectedTrip, className, speedCalibr
   };
 
   useEffect(() => {
+    // If focusing on a specific camera, center on that camera
+    if (focusCamera) {
+      const cameraPoint: [number, number] = [focusCamera.lat, focusCamera.lng];
+      const cameraBounds = new LatLngBounds([cameraPoint]);
+      setBounds(cameraBounds);
+      return;
+    }
+    
+    // If focusing on a camera within a trip, center on that camera
+    if (focusTripCamera) {
+      const cameraPoint: [number, number] = [focusTripCamera.lat, focusTripCamera.lng];
+      const cameraBounds = new LatLngBounds([cameraPoint]);
+      setBounds(cameraBounds);
+      return;
+    }
+    
     if (trips.length === 0) return;
     
     const allPoints: [number, number][] = [];
@@ -304,7 +425,7 @@ const TripMap: FC<TripMapProps> = ({ trips, selectedTrip, className, speedCalibr
       const bounds = new LatLngBounds(allPoints);
       setBounds(bounds);
     }
-  }, [trips, selectedTrip, legendState]);
+  }, [trips, selectedTrip, legendState, focusCamera, focusTripCamera]);
 
   // Helper function to determine if a camera type should be shown
   const shouldShowCamera = (speedTrapType: string): boolean => {
@@ -455,8 +576,97 @@ const TripMap: FC<TripMapProps> = ({ trips, selectedTrip, className, speedCalibr
           });
         })}
         
-        {/* Speed trap event markers */}
-        {trips.map((trip) => {
+        {/* Combined camera markers for "all trips" view */}
+        {viewMode === 'all' && !selectedTrip && combinedCameras.map((camera, index) => {
+          if (!shouldShowCamera(camera.speedTrapType)) return null;
+          
+          // Determine overall violation status for the camera
+          const hasViolations = camera.violations > 0;
+          const hasWarnings = camera.warnings > 0;
+          const violationLevel = hasViolations ? 'VIOLATION' : hasWarnings ? 'WARNING' : 'COMPLIANT';
+          
+          // Get appropriate icon
+          const IconComponent = camera.speedTrapType.toLowerCase() === 'speedcam' ? PiSecurityCamera :
+                               camera.speedTrapType.toLowerCase() === 'speedtrap' ? PiPoliceCarFill :
+                               camera.speedTrapType.toLowerCase() === 'averagespeedcheck' ? PiSpeedometerFill :
+                               PiSecurityCamera;
+          
+          return (
+            <Marker
+              key={`combined-camera-${index}`}
+              position={[camera.latitude, camera.longitude]}
+              icon={createSpeedCameraIcon(violationLevel, IconComponent)}
+            >
+              <Popup>
+                <div className="p-3 min-w-[250px]">
+                  <div className="font-semibold mb-3 flex items-center gap-2">
+                    <IconComponent className="h-4 w-4" />
+                    {camera.roadName}
+                    <span className="text-sm font-normal text-gray-600">({camera.speedTrapType})</span>
+                  </div>
+                  
+                  <div className="mb-3 text-sm">
+                    <div className="font-medium text-gray-900">{camera.totalEncounters} encounters</div>
+                    <div className="flex gap-3 text-xs mt-1">
+                      {camera.violations > 0 && <span className="text-red-600">{camera.violations} violations</span>}
+                      {camera.warnings > 0 && <span className="text-yellow-600">{camera.warnings} warnings</span>}
+                      {camera.compliant > 0 && <span className="text-green-600">{camera.compliant} compliant</span>}
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-1 text-xs">
+                    <div className="font-medium text-gray-700 mb-2">Click an encounter to view in trip:</div>
+                    {camera.encounters
+                      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                      .slice(0, 5)
+                      .map((encounter, idx) => {
+                        const styling = getSpeedTrapStyling(encounter.event);
+                        return (
+                          <button
+                            key={idx}
+                            onClick={() => navigate({
+                              to: '/trips',
+                              search: {
+                                view: 'trip-camera',
+                                focusTripCamera: {
+                                  tripStartTime: encounter.trip.startTime,
+                                  tripEndTime: encounter.trip.endTime,
+                                  lat: camera.latitude,
+                                  lng: camera.longitude,
+                                  type: camera.speedTrapType,
+                                  name: camera.roadName
+                                }
+                              }
+                            })}
+                            className="block w-full text-left p-1 rounded hover:bg-gray-100 transition-colors"
+                          >
+                            <div className="flex justify-between items-center">
+                              <span className="font-medium">{new Date(encounter.date).toLocaleDateString()}</span>
+                              <span className={classnames('font-semibold', {
+                                'text-red-600': styling.isViolation,
+                                'text-yellow-600': styling.isWarning,
+                                'text-green-600': styling.isCompliant
+                              })}>
+                                {encounter.event.speed.toFixed(1)} km/h
+                              </span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    {camera.encounters.length > 5 && (
+                      <div className="text-xs text-gray-500 mt-2">
+                        +{camera.encounters.length - 5} more encounters
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
+
+        {/* Individual speed trap event markers for specific trip views */}
+        {(viewMode !== 'all' || selectedTrip) && trips.map((trip) => {
           if (!trip.speedTrapEvents) return null;
           
           return trip.speedTrapEvents.map((event, eventIndex) => {
@@ -664,6 +874,8 @@ const TripMap: FC<TripMapProps> = ({ trips, selectedTrip, className, speedCalibr
             </Marker>
           );
         })}
+        
+
       </MapContainer>
       
       {/* Map Legend */}
