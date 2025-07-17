@@ -449,8 +449,7 @@ const CamsComponent: FC = () => {
                               search: {
                                 view: 'trip-camera',
                                 focusTripCamera: {
-                                  tripStartTime: encounter.trip.startTime,
-                                  tripEndTime: encounter.trip.endTime,
+                                  tripCreated: encounter.trip.created || encounter.trip.startTime,
                                   lat: camera.latitude,
                                   lng: camera.longitude,
                                   type: camera.speedTrapType,

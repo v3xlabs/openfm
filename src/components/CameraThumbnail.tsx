@@ -1,4 +1,4 @@
-import React from 'react';
+
 import type { FC } from 'react';
 import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import { divIcon } from 'leaflet';

@@ -14,7 +14,7 @@ import { analyzeSpeedTrapsByType } from '../utils/speedTrapHelpers';
 interface TripListProps {
   trips: Trip[];
   selectedTrip?: Trip | null;
-  onTripSelect: (trip: Trip) => void;
+  onTripSelect: (trip: Trip | null) => void;
   className?: string;
 }
 
@@ -88,7 +88,7 @@ const TripList: FC<TripListProps> = ({ trips, selectedTrip, onTripSelect, classN
           </div>
           {selectedTrip && (
             <button
-              onClick={() => onTripSelect(null as unknown as Trip)}
+              onClick={() => onTripSelect(null)}
               className="px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 flex items-center gap-2 font-medium"
             >
               <IoMapOutline className="h-4 w-4" />

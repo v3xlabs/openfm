@@ -32,8 +32,7 @@ interface FocusCamera {
 }
 
 interface FocusTripCamera {
-  tripStartTime: string;
-  tripEndTime: string;
+  tripCreated: string;
   lat: number;
   lng: number;
   type: string;
@@ -629,8 +628,7 @@ const TripMap: FC<TripMapProps> = ({ trips, selectedTrip, className, speedCalibr
                               search: {
                                 view: 'trip-camera',
                                 focusTripCamera: {
-                                  tripStartTime: encounter.trip.startTime,
-                                  tripEndTime: encounter.trip.endTime,
+                                  tripCreated: encounter.trip.created || encounter.trip.startTime,
                                   lat: camera.latitude,
                                   lng: camera.longitude,
                                   type: camera.speedTrapType,

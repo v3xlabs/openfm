@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState, useEffect } from 'react'
 import type { FC } from 'react'
 import { 
@@ -23,8 +23,7 @@ interface FocusCamera {
 }
 
 interface FocusTripCamera {
-  tripStartTime: string;
-  tripEndTime: string;
+  tripCreated: string;
   lat: number;
   lng: number;
   type: string;
@@ -33,21 +32,40 @@ interface FocusTripCamera {
 
 interface TripsSearch {
   view?: 'all' | 'trip' | 'camera' | 'trip-camera';
-  tripId?: string; // Format: startTime-endTime
+  tripCreated?: string; // Trip created timestamp
   focusCamera?: FocusCamera;
   focusTripCamera?: FocusTripCamera;
 }
 
 const TripsComponent: FC = () => {
   const { data } = useData()
-  const { view = 'all', tripId, focusCamera, focusTripCamera } = Route.useSearch()
+  const navigate = useNavigate()
+  const { view = 'all', tripCreated, focusCamera, focusTripCamera } = Route.useSearch()
   const [selectedTrip, setSelectedTrip] = useState<Trip | null>(null)
   const [speedCalibrationFactor, setSpeedCalibrationFactor] = useState(1.0)
   const [showCalibration, setShowCalibration] = useState(false)
 
-  const handleTripSelect = (trip: Trip) => {
+  const handleTripSelect = (trip: Trip | null) => {
+    if (trip === null) {
+      // Deselect trip - go to all trips view and clear all focus
+      navigate({
+        to: '/trips',
+        search: {
+          view: 'all'
+        }
+      })
+    } else {
+      // Select trip - clear any camera focus and go to trip view
+      navigate({
+        to: '/trips',
+        search: {
+          view: 'trip',
+          tripCreated: trip.created || trip.startTime
+        }
+      })
+    }
     setSelectedTrip(trip)
-    console.log('Trip selected:', trip.startTime, trip.endTime);
+    console.log('Trip selected:', trip ? `${trip.startTime} - ${trip.endTime}` : 'None');
   }
 
   const handleCalibrationFactorChange = (factor: number) => {
@@ -58,21 +76,15 @@ const TripsComponent: FC = () => {
   useEffect(() => {
     if (!data?.trips) return;
 
-    if (view === 'trip' && tripId) {
-      // Parse tripId format: startTime-endTime
-      const [startTime, endTime] = tripId.split('-');
-      const trip = data.trips.find(t => 
-        t.startTime === startTime && t.endTime === endTime
-      );
+    if (view === 'trip' && tripCreated) {
+      // Find trip by created timestamp
+      const trip = data.trips.find(t => t.created === tripCreated);
       if (trip) {
         setSelectedTrip(trip);
       }
     } else if (view === 'trip-camera' && focusTripCamera) {
       // Select specific trip for trip-camera view
-      const trip = data.trips.find(t => 
-        t.startTime === focusTripCamera.tripStartTime && 
-        t.endTime === focusTripCamera.tripEndTime
-      );
+      const trip = data.trips.find(t => t.created === focusTripCamera.tripCreated);
       if (trip) {
         setSelectedTrip(trip);
       }
@@ -80,7 +92,7 @@ const TripsComponent: FC = () => {
       // Clear selection for all trips or camera views
       setSelectedTrip(null);
     }
-  }, [view, tripId, focusTripCamera, data]);
+  }, [view, tripCreated, focusTripCamera, data]);
 
   if (!data) {
     return <div>Loading...</div> // This should not happen with AppWrapper but just in case
@@ -240,7 +252,7 @@ export const Route = createFileRoute('/trips')({
   component: TripsComponent,
   validateSearch: (search: Record<string, unknown>): TripsSearch => ({
     view: (search.view as 'all' | 'trip' | 'camera' | 'trip-camera') || 'all',
-    tripId: search.tripId as string | undefined,
+    tripCreated: search.tripCreated as string | undefined,
     focusCamera: search.focusCamera as FocusCamera | undefined,
     focusTripCamera: search.focusTripCamera as FocusTripCamera | undefined,
   })
