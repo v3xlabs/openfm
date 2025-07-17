@@ -2,21 +2,30 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
 import type { FC } from 'react'
 import { 
-  IoMapOutline
+  IoMapOutline,
+  IoSpeedometerOutline,
+  IoSettingsOutline
 } from 'react-icons/io5'
 import TripMap from '../components/TripMap'
 import TripList from '../components/TripList'
+import { SpeedCalibration } from '../components'
 import type { Trip } from '../types'
 import { useData } from '../hooks/useData'
 
 const TripsComponent: FC = () => {
   const { data } = useData()
   const [selectedTrip, setSelectedTrip] = useState<Trip | null>(null)
+  const [speedCalibrationFactor, setSpeedCalibrationFactor] = useState(1.0)
+  const [showCalibration, setShowCalibration] = useState(false)
 
   const handleTripSelect = (trip: Trip) => {
     setSelectedTrip(trip)
     console.log('Trip selected:', trip.startTime, trip.endTime);
   }
+
+  const handleCalibrationFactorChange = (factor: number) => {
+    setSpeedCalibrationFactor(factor);
+  };
 
   if (!data) {
     return <div>Loading...</div> // This should not happen with AppWrapper but just in case
@@ -28,6 +37,29 @@ const TripsComponent: FC = () => {
 
   return (
     <div className="h-[calc(100vh-94px)] overflow-hidden">
+      {/* Speed Calibration Overlay */}
+      {showCalibration && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h2 className="text-lg font-semibold">Speed Calibration</h2>
+              <button
+                onClick={() => setShowCalibration(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-4">
+              <SpeedCalibration 
+                trips={trips}
+                onCalibrationApplied={handleCalibrationFactorChange}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
       <div className="flex h-full">
         {trips.length > 0 ? (
@@ -48,6 +80,23 @@ const TripsComponent: FC = () => {
                           </span>
                         )}
                       </h3>
+                    </div>
+                    
+                    {/* Speed Calibration Controls */}
+                    <div className="flex items-center gap-3">
+                      {speedCalibrationFactor !== 1.0 && (
+                        <div className="flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">
+                          <IoSpeedometerOutline className="h-4 w-4" />
+                          <span>Calibrated ({(speedCalibrationFactor * 100).toFixed(1)}%)</span>
+                        </div>
+                      )}
+                      <button
+                        onClick={() => setShowCalibration(true)}
+                        className="flex items-center gap-2 px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md transition-colors"
+                      >
+                        <IoSettingsOutline className="h-4 w-4" />
+                        Speed Calibration
+                      </button>
                     </div>
                   </div>
                 </div>

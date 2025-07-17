@@ -191,7 +191,7 @@ export interface PolylineSegment {
 }
 
 // Calculate speed for each segment of a trip
-export const calculateSegmentSpeeds = (trip: Trip): PolylineSegment[] => {
+export const calculateSegmentSpeeds = (trip: Trip, calibrationFactor = 1.0): PolylineSegment[] => {
   if (!trip.polyline || !trip.startTime || !trip.endTime) {
     return [];
   }
@@ -273,10 +273,10 @@ export const calculateSegmentSpeeds = (trip: Trip): PolylineSegment[] => {
   const referenceDistance = trip.distanceKm || totalCalculatedDistance;
   const referenceTotalSpeed = referenceDistance / (totalDurationSeconds / 3600); // Average speed for entire trip
 
-  // Calculate initial speeds
+  // Calculate initial speeds and apply calibration factor
   for (let i = 0; i < filteredSegments.length; i++) {
     const segment = filteredSegments[i];
-    segment.speedKmh = segment.distanceKm / (timePerSegment / 3600);
+    segment.speedKmh = (segment.distanceKm / (timePerSegment / 3600)) * calibrationFactor;
   }
 
   // Apply smoothing with moving average (window of 3 segments)
@@ -306,12 +306,13 @@ export const calculateSegmentSpeeds = (trip: Trip): PolylineSegment[] => {
     
     // If speed is still unrealistic compared to reference speed, adjust it
     const maxDeviationFactor = 3; // Allow up to 3x the average trip speed
-    const maxReasonableSpeed = Math.min(250, referenceTotalSpeed * maxDeviationFactor);
-    const minReasonableSpeed = Math.max(0, referenceTotalSpeed * 0.1); // Allow very slow speeds
+    const adjustedReferenceSpeed = referenceTotalSpeed * calibrationFactor;
+    const maxReasonableSpeed = Math.min(250, adjustedReferenceSpeed * maxDeviationFactor);
+    const minReasonableSpeed = Math.max(0, adjustedReferenceSpeed * 0.1); // Allow very slow speeds
     
     if (speed > maxReasonableSpeed) {
       speed = maxReasonableSpeed;
-    } else if (speed < minReasonableSpeed && referenceTotalSpeed > 10) {
+    } else if (speed < minReasonableSpeed && adjustedReferenceSpeed > 10) {
       // Only enforce minimum speed if the trip average is reasonable (> 10 km/h)
       speed = minReasonableSpeed;
     }
@@ -354,17 +355,20 @@ export const getSpeedColor = (speedKmh: number): string => {
     return '#6B7280'; // Gray for invalid speeds
   }
 
-  // Define color points [R, G, B]
+  // Define improved color points [speed, [R, G, B]] with more logical progression
   const colorPoints: Array<[number, [number, number, number]]> = [
-    [0, [135, 206, 235]],    // Light blue for very low speeds
-    [30, [135, 206, 235]],   // Light blue for 30 km/h
-    [50, [59, 130, 246]],    // Blue for 50 km/h  
-    [70, [251, 191, 36]],    // Yellow for 70 km/h
-    [90, [249, 115, 22]],    // Orange for 90 km/h
-    [110, [239, 68, 68]],    // Red for 110 km/h
-    [130, [185, 28, 28]],    // Dark red for 130 km/h
-    [150, [127, 29, 29]],    // Darker red for 150 km/h
-    [200, [69, 10, 10]]      // Very dark red for high speeds
+    [0, [100, 116, 139]],    // Slate gray for stationary/very slow
+    [10, [59, 130, 246]],    // Blue for walking/very slow speeds  
+    [30, [34, 197, 94]],     // Green for city speeds (30 km/h zones)
+    [50, [132, 204, 22]],    // Light green for residential speeds
+    [70, [234, 179, 8]],     // Yellow for main road speeds
+    [90, [249, 115, 22]],    // Orange for highway speeds
+    [110, [239, 68, 68]],    // Red for fast highway speeds
+    [130, [220, 38, 127]],   // Pink for very fast speeds
+    [150, [147, 51, 234]],   // Purple for extremely fast speeds
+    [180, [99, 102, 241]],   // Indigo for dangerously fast speeds
+    [220, [79, 70, 229]],    // Deep blue for racing speeds
+    [300, [30, 27, 75]]      // Very dark blue for impossible speeds
   ];
 
   // Find the appropriate color range

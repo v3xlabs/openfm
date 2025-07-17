@@ -27,6 +27,7 @@ interface TripMapProps {
   trips: Trip[];
   selectedTrip?: Trip | null;
   className?: string;
+  speedCalibrationFactor?: number;
 }
 
 interface MapLegendState {
@@ -236,7 +237,7 @@ const MapLegend: FC<{
   );
 };
 
-const TripMap: FC<TripMapProps> = ({ trips, selectedTrip, className }) => {
+const TripMap: FC<TripMapProps> = ({ trips, selectedTrip, className, speedCalibrationFactor = 1.0 }) => {
   const [bounds, setBounds] = useState<LatLngBounds | null>(null);
   const [legendState, setLegendState] = useState<MapLegendState>({
     showTripPaths: true,
@@ -355,7 +356,7 @@ const TripMap: FC<TripMapProps> = ({ trips, selectedTrip, className }) => {
           
           // If this is the selected trip, render individual segments with speed tooltips
           if (isSelected) {
-            const segments = calculateSegmentSpeeds(trip);
+            const segments = calculateSegmentSpeeds(trip, speedCalibrationFactor);
             
             return segments.map((segment, segmentIndex) => (
               <Polyline
@@ -390,7 +391,7 @@ const TripMap: FC<TripMapProps> = ({ trips, selectedTrip, className }) => {
             ));
           } else {
             // For non-selected trips, render as a single polyline with average speed color
-            const segments = calculateSegmentSpeeds(trip);
+            const segments = calculateSegmentSpeeds(trip, speedCalibrationFactor);
             const avgSpeed = segments.length > 0 
               ? segments.reduce((sum, seg) => sum + seg.speedKmh, 0) / segments.length 
               : 0;
