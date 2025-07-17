@@ -170,7 +170,7 @@ const StatsComponent: FC = () => {
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Performance & Usage Trends</h2>
             <p className="text-gray-600">Visual analysis of your driving patterns and app usage over time</p>
           </div>
-          <StatsCharts quarterlyStatistics={filteredStatistics} />
+          <StatsCharts quarterlyStatistics={filteredStatistics} trips={trips} />
         </div>
       )}
 

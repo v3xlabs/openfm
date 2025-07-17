@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import type { FC } from 'react';
 import classnames from 'classnames';
-import { IoCloudUploadOutline, IoDocumentOutline, IoCheckmarkCircleOutline } from 'react-icons/io5';
+import { IoDocumentOutline, IoCheckmarkCircleOutline } from 'react-icons/io5';
 import { parseFlitsmeisterZip } from '../utils/dataParser';
 import type { ExtendedFlitsmeisterData } from '../types/dataTypes';
 import { FiExternalLink, FiUser } from 'react-icons/fi';
