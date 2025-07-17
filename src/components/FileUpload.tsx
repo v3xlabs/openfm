@@ -4,6 +4,8 @@ import classnames from 'classnames';
 import { IoCloudUploadOutline, IoDocumentOutline, IoCheckmarkCircleOutline } from 'react-icons/io5';
 import { parseFlitsmeisterZip } from '../utils/dataParser';
 import type { ExtendedFlitsmeisterData } from '../types/dataTypes';
+import { FiExternalLink, FiUser } from 'react-icons/fi';
+import { FaFileUpload } from 'react-icons/fa';
 
 interface FileUploadProps {
   onDataLoaded: (data: ExtendedFlitsmeisterData) => void;
@@ -18,14 +20,14 @@ const FileUpload: FC<FileUploadProps> = ({ onDataLoaded, isLoading = false }) =>
     if (!files || files.length === 0) return;
 
     const file = files[0];
-    
+
     if (!file.name.endsWith('.zip')) {
       setError('Please select a valid ZIP file');
       return;
     }
 
     setError(null);
-    
+
     try {
       const data = await parseFlitsmeisterZip(file);
       onDataLoaded(data);
@@ -38,7 +40,7 @@ const FileUpload: FC<FileUploadProps> = ({ onDataLoaded, isLoading = false }) =>
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     if (e.type === 'dragenter' || e.type === 'dragover') {
       setDragActive(true);
     } else if (e.type === 'dragleave') {
@@ -50,7 +52,7 @@ const FileUpload: FC<FileUploadProps> = ({ onDataLoaded, isLoading = false }) =>
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    
+
     handleFiles(e.dataTransfer.files);
   }, [handleFiles]);
 
@@ -82,28 +84,28 @@ const FileUpload: FC<FileUploadProps> = ({ onDataLoaded, isLoading = false }) =>
           disabled={isLoading}
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
         />
-        
+
         <div className="space-y-6">
           <div className="mx-auto w-20 h-20 text-gray-400">
             {isLoading ? (
               <div className="w-20 h-20 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
             ) : (
-              <IoCloudUploadOutline className="w-full h-full" />
+              <FaFileUpload className="w-full h-full" />
             )}
           </div>
-          
+
           <div>
             <h3 className="text-2xl font-semibold text-gray-900 mb-3">
               {isLoading ? 'Processing Your Data...' : 'Upload Flitsmeister Data'}
             </h3>
             <p className="text-lg text-gray-600 mb-6">
-              {isLoading 
-                ? 'Parsing your data export and preparing the visualization...' 
+              {isLoading
+                ? 'Parsing your data export and preparing the visualization...'
                 : 'Drag and drop your ZIP file here, or click to select'
               }
             </p>
           </div>
-          
+
           {!isLoading && (
             <div className="space-y-4">
               <button
@@ -113,7 +115,7 @@ const FileUpload: FC<FileUploadProps> = ({ onDataLoaded, isLoading = false }) =>
                 <IoDocumentOutline className="h-6 w-6" />
                 Choose File
               </button>
-              
+
               <div className="text-sm text-gray-500">
                 Supports ZIP files up to 100MB
               </div>
@@ -121,7 +123,7 @@ const FileUpload: FC<FileUploadProps> = ({ onDataLoaded, isLoading = false }) =>
           )}
         </div>
       </div>
-      
+
       {error && (
         <div className="mt-6 p-6 bg-red-50 border border-red-200 rounded-xl">
           <div className="flex items-start gap-3">
@@ -137,7 +139,7 @@ const FileUpload: FC<FileUploadProps> = ({ onDataLoaded, isLoading = false }) =>
           </div>
         </div>
       )}
-      
+
       <div className="mt-8 p-6 bg-blue-50 border border-blue-200 rounded-xl">
         <div className="flex items-start gap-3">
           <IoCheckmarkCircleOutline className="w-5 h-5 text-blue-600 mt-0.5" />
@@ -154,14 +156,18 @@ const FileUpload: FC<FileUploadProps> = ({ onDataLoaded, isLoading = false }) =>
                   account.flitsmeister.com
                 </a>
               </li>
-              <li>Request your GDPR data export</li>
-              <li>Wait for the email with download link</li>
+              <li><span className="inline-flex items-center gap-2">Go to <span className="text-blue-900 font-bold inline-flex items-center gap-1"><FiUser /> Profile</span></span></li>
+              <li>
+                <span className="inline-flex items-center gap-2">
+                  Click on <span className="text-blue-900 font-bold inline-flex items-center gap-1">Right of access <FiExternalLink /></span>
+                </span>
+              </li>
               <li>Download the ZIP file and upload it here</li>
             </ol>
           </div>
         </div>
       </div>
-    </div>
+    </div >
   );
 };
 
